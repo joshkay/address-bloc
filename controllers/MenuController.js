@@ -15,6 +15,8 @@ module.exports = class MenuController
         choices:
         [
           'Add new contact',
+          'View all contacts',
+          'Search for a contact',
           'Show current date and time',
           'Exit'
         ]
@@ -38,6 +40,12 @@ module.exports = class MenuController
           break;
         case 'Show current date and time':
           this.getDate();
+          break;
+        case 'Search for a contact':
+          this.search();
+          break;
+        case 'View all contacts':
+          this.getContacts();
           break;
         case 'Exit':
           this.exit();
@@ -67,7 +75,7 @@ module.exports = class MenuController
       this.book.addContact(answers.name, answers.phone, answers.email)
       .then((contact) =>
       {
-        console.log('Contact added successfully!');
+        console.log('Contact added successfully!\n');
         this.main();
       })
       .catch((err) =>
@@ -90,6 +98,27 @@ module.exports = class MenuController
 
     this.main();
   }
+  
+  getContacts()
+  {
+    this.clear();
+
+    this.book.getContacts()
+    .then((contacts) =>
+    {
+      for (let contact of contacts)
+      {
+        this._printContact(contact);
+      }
+
+      this.main();
+    })
+    .catch((err) =>
+    {
+      console.log(err);
+      this.main();
+    });
+  }
 
   exit()
   {
@@ -105,5 +134,95 @@ module.exports = class MenuController
   remindMe()
   {
     return 'Learning is a life-long pursuit';
+  }
+
+  search()
+  {
+    this.clear();
+
+    inquirer.prompt(this.book.searchQuestions)
+    .then((target) =>
+    {
+      this.book.search(target.name)
+      .then((contact) =>
+      {
+        if (contact === null)
+        {
+          console.log('Contact not found!\n');
+          this.main();
+        }
+        else
+        {
+          this.showContact(contact);
+        }
+      })
+      .catch((err) =>
+      {
+        console.log(err);
+        this.main();
+      });
+    });
+  }
+
+  showContact(contact)
+  {
+    this._printContact(contact);
+
+    inquirer.prompt(this.book.showContactQuestions)
+    .then((answer) =>
+    {
+      switch (answer.selected)
+      {
+        case 'Delete contact':
+          this.delete(contact);
+          break;
+        case 'Main menu':
+          this.clear();
+          this.main();
+          break;
+        default:
+          console.log('Something went wrong!\n');
+          this.showContact(contact);
+      }
+    })
+    .catch((err) =>
+    {
+      console.log(err);
+      this.showContact(contact);
+    });
+  }
+
+  delete(contact)
+  {
+    inquirer.prompt(this.book.deleteConfirmQuestions)
+    .then((answer) =>
+    {
+      if (answer.confirmation)
+      {
+        this.book.delete(contact.id);
+        console.log('Contact deleted!\n');
+        this.main();
+      }
+      else
+      {
+        console.log('Contact not deleted!\n');
+        this.showContact(contact);
+      }
+    })
+    .catch((err) =>
+    {
+      console.log(err);
+      this.main();
+    });
+  }
+
+  _printContact(contact)
+  {
+    console.log(
+      `name: ${contact.name}\n` +
+      `phone number: ${contact.phone}\n` +
+      `email: ${contact.email}\n` +
+      `------------------------------\n`
+    );
   }
 }
